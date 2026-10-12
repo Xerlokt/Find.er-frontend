@@ -14,6 +14,15 @@ describe('resolveRoute', () => {
     expect(resolveRoute({ signedIn: true, offline: true, profile: 'ready', pendingDisc: false })).toBe('app');
   });
 
+  it('logado com email não verificado vai para verify-email, antes mesmo do perfil', () => {
+    expect(resolveRoute({ signedIn: true, emailVerified: false, profile: 'pending', pendingDisc: false })).toBe('verify-email');
+    expect(resolveRoute({ signedIn: true, emailVerified: false, profile: 'ready', pendingDisc: false })).toBe('verify-email');
+  });
+
+  it('logado com email verificado segue o fluxo normal', () => {
+    expect(resolveRoute({ signedIn: true, emailVerified: true, profile: 'ready', pendingDisc: false })).toBe('app');
+  });
+
   it('logado com consulta do perfil em andamento fica em loading', () => {
     expect(resolveRoute({ signedIn: true, profile: 'pending', pendingDisc: false })).toBe('loading');
   });

@@ -10,6 +10,7 @@ import { JobsPage } from './pages/JobsPage';
 import { JobFormPage } from './pages/JobFormPage';
 import { RankingPage } from './pages/RankingPage';
 import { ChatsPage } from './pages/ChatsPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
 /** Restaura a sessão (refresh token em localStorage -> novo access token) antes de decidir a rota. */
 function useBootstrap() {
@@ -26,8 +27,9 @@ function useBootstrap() {
 }
 
 function Protected() {
-  const { accessToken, role } = useSession();
+  const { accessToken, role, emailVerified } = useSession();
   if (!accessToken) return <Navigate to="/login" replace />;
+  if (!emailVerified) return <Navigate to="/verificar-email" replace />;
   if (role !== 'RECRUITER') {
     return (
       <Splash
@@ -45,8 +47,17 @@ function Protected() {
 }
 
 function PublicOnly() {
-  const accessToken = useSession((s) => s.accessToken);
-  return accessToken ? <Navigate to="/vagas" replace /> : <Outlet />;
+  const { accessToken, emailVerified } = useSession();
+  if (!accessToken) return <Outlet />;
+  return <Navigate to={emailVerified ? '/vagas' : '/verificar-email'} replace />;
+}
+
+/** Página de código: exige login e só aparece enquanto o email não foi verificado. */
+function UnverifiedOnly() {
+  const { accessToken, emailVerified } = useSession();
+  if (!accessToken) return <Navigate to="/login" replace />;
+  if (emailVerified) return <Navigate to="/vagas" replace />;
+  return <Outlet />;
 }
 
 export function App() {
@@ -57,6 +68,9 @@ export function App() {
       <Route element={<PublicOnly />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cadastro" element={<RegisterPage />} />
+      </Route>
+      <Route element={<UnverifiedOnly />}>
+        <Route path="/verificar-email" element={<VerifyEmailPage />} />
       </Route>
       <Route element={<Protected />}>
         <Route path="/vagas" element={<JobsPage />} />

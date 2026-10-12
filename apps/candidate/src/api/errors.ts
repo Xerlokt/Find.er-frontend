@@ -44,6 +44,18 @@ export function friendlyMessage(err: unknown): string {
       return 'esse email já tá em uso';
     case 'FORBIDDEN':
       return 'você não tem permissão pra isso';
+    case 'INVALID_CODE':
+      return 'código incorreto, confere e tenta de novo';
+    case 'CODE_EXPIRED':
+      return 'esse código expirou. pede um novo';
+    case 'TOO_MANY_ATTEMPTS':
+      return 'muitas tentativas erradas. pede um novo código';
+    case 'ALREADY_VERIFIED':
+      return 'esse email já foi verificado';
+    case 'RESEND_TOO_SOON':
+      return 'espera um pouquinho antes de pedir outro código';
+    case 'EMAIL_SEND_FAILED':
+      return 'não consegui enviar o email agora, tenta de novo em instantes';
     case 'NOT_FOUND':
       return 'não encontramos isso';
   }

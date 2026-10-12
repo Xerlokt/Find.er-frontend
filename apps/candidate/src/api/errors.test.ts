@@ -45,6 +45,10 @@ describe('friendlyMessage', () => {
     expect(friendlyMessage(parseApiError(409, { error: 'x', code: 'CONFLICT' }))).toBe('esse email já tá em uso');
     expect(friendlyMessage(parseApiError(403, { error: 'x', code: 'FORBIDDEN' }))).toBe('você não tem permissão pra isso');
     expect(friendlyMessage(parseApiError(404, { error: 'x', code: 'NOT_FOUND' }))).toBe('não encontramos isso');
+    expect(friendlyMessage(parseApiError(409, { error: 'x', code: 'ALREADY_VERIFIED' }))).toBe('esse email já foi verificado');
+    expect(friendlyMessage(parseApiError(400, { error: 'x', code: 'INVALID_CODE' }))).toBe('código incorreto, confere e tenta de novo');
+    expect(friendlyMessage(parseApiError(410, { error: 'x', code: 'CODE_EXPIRED' }))).toBe('esse código expirou. pede um novo');
+    expect(friendlyMessage(parseApiError(429, { error: 'x', code: 'TOO_MANY_ATTEMPTS' }))).toBe('muitas tentativas erradas. pede um novo código');
   });
 
   it('429 mostra o tempo de espera quando existe', () => {

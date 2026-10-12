@@ -26,6 +26,20 @@ describe('session store', () => {
     expect(secure.setItemAsync).toHaveBeenCalledWith('finder.refreshToken', 'rt');
   });
 
+  it('setTokens lê emailVerified do JWT (ausente = falso)', async () => {
+    await useSession.getState().setTokens({ accessToken: jwt({ id: 'u1', role: 'CANDIDATE', emailVerified: true }), refreshToken: 'rt' });
+    expect(useSession.getState().emailVerified).toBe(true);
+    await useSession.getState().setTokens({ accessToken: jwt({ id: 'u1', role: 'CANDIDATE' }), refreshToken: 'rt' });
+    expect(useSession.getState().emailVerified).toBe(false);
+  });
+
+  it('setTokens guarda o email do JWT e clear zera', async () => {
+    await useSession.getState().setTokens({ accessToken: jwt({ id: 'u1', role: 'CANDIDATE', email: 'a@b.com' }), refreshToken: 'rt' });
+    expect(useSession.getState().email).toBe('a@b.com');
+    await useSession.getState().clear();
+    expect(useSession.getState().email).toBeNull();
+  });
+
   it('JWT malformado não derruba: id e role ficam nulos', async () => {
     await useSession.getState().setTokens({ accessToken: 'lixo', refreshToken: 'rt' });
     expect(useSession.getState()).toMatchObject({ accessToken: 'lixo', userId: null, role: null });

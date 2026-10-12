@@ -121,6 +121,15 @@ export const previewCnpj = (cnpj: string) => api<CnpjPreview>(`/auth/cnpj/${cnpj
 export const registerCompany = (input: { cnpj: string; email: string; password: string; description?: string }) =>
   adopt(api<Tokens>('/auth/register-company', { method: 'POST', body: input, auth: false }));
 
+/** Pede um novo código de verificação por email (204). */
+export const sendEmailCode = () => api<void>('/auth/email/send', { method: 'POST' });
+
+/** Confere o código; o servidor devolve tokens novos já com emailVerified. */
+export const verifyEmail = (code: string) => adopt(api<Tokens>('/auth/email/verify', { method: 'POST', body: { code } }));
+
+/** Corrige o email de uma conta não verificada; o servidor manda código novo e devolve tokens com o email atualizado. */
+export const changeEmail = (email: string) => adopt(api<Tokens>('/auth/email/change', { method: 'POST', body: { email } }));
+
 export async function logout() {
   const { refreshToken, clear } = useSession.getState();
   clear();

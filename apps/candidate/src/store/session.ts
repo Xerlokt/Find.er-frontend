@@ -12,12 +12,14 @@ type SessionState = {
   refreshToken: string | null;
   userId: string | null;
   role: Role | null;
+  emailVerified: boolean;
+  email: string | null;
   hydrate: () => Promise<void>;
   setTokens: (t: Tokens) => Promise<void>;
   clear: () => Promise<void>;
 };
 
-function decodeJwt(token: string): { id?: string; role?: Role } {
+function decodeJwt(token: string): { id?: string; email?: string; role?: Role; emailVerified?: boolean } {
   try {
     const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const json = decodeURIComponent(
@@ -38,6 +40,8 @@ export const useSession = create<SessionState>((set) => ({
   refreshToken: null,
   userId: null,
   role: null,
+  emailVerified: false,
+  email: null,
 
   // Só o refresh token é persistido; o access token (15 min) fica em memória e é recriado via /auth/refresh.
   hydrate: async () => {
@@ -51,12 +55,12 @@ export const useSession = create<SessionState>((set) => ({
 
   setTokens: async ({ accessToken, refreshToken }) => {
     const claims = decodeJwt(accessToken);
-    set({ accessToken, refreshToken, userId: claims.id ?? null, role: claims.role ?? null });
+    set({ accessToken, refreshToken, userId: claims.id ?? null, role: claims.role ?? null, emailVerified: claims.emailVerified === true, email: claims.email ?? null });
     await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
   },
 
   clear: async () => {
-    set({ accessToken: null, refreshToken: null, userId: null, role: null });
+    set({ accessToken: null, refreshToken: null, userId: null, role: null, emailVerified: false, email: null });
     try {
       await SecureStore.deleteItemAsync(REFRESH_KEY);
     } catch {}

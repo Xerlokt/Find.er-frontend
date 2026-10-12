@@ -17,6 +17,23 @@ export async function register(email: string, password: string) {
   await useSession.getState().setTokens(tokens);
 }
 
+/** Pede um novo código de verificação por email (204). */
+export async function sendEmailCode() {
+  await api('/auth/email/send', { method: 'POST' });
+}
+
+/** Confere o código; o servidor devolve tokens novos já com emailVerified. */
+export async function verifyEmail(code: string) {
+  const tokens = await api<Tokens>('/auth/email/verify', { method: 'POST', body: { code } });
+  await useSession.getState().setTokens(tokens);
+}
+
+/** Corrige o email de uma conta não verificada; o servidor manda código novo e devolve tokens com o email atualizado. */
+export async function changeEmail(email: string) {
+  const tokens = await api<Tokens>('/auth/email/change', { method: 'POST', body: { email } });
+  await useSession.getState().setTokens(tokens);
+}
+
 export async function logout() {
   const { refreshToken, clear } = useSession.getState();
   await unregisterPush();

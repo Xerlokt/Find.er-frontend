@@ -118,9 +118,11 @@ function RootNavigator({
   retrying: boolean;
   onRetry: () => void;
 }) {
-  usePushNotifications(signedIn);
-  useLiveInbox(signedIn);
-  const profileQuery = useProfile(signedIn);
+  const emailVerified = useSession((s) => s.emailVerified);
+  const active = signedIn && emailVerified; // só chama a API protegida depois de validar o email
+  usePushNotifications(active);
+  useLiveInbox(active);
+  const profileQuery = useProfile(active);
   const pendingDisc = useOnboarding((s) => s.pendingDisc);
   const setPendingDisc = useOnboarding((s) => s.setPendingDisc);
 
@@ -135,7 +137,7 @@ function RootNavigator({
       : profileQuery.data
         ? 'ready'
         : 'missing';
-  const route = resolveRoute({ signedIn, offline, profile: profileStatus, pendingDisc });
+  const route = resolveRoute({ signedIn, emailVerified, offline, profile: profileStatus, pendingDisc });
 
   // Sessão salva, mas o servidor não respondeu no boot: não é logout, então não mostra o login.
   if (route === 'offline') {
@@ -174,6 +176,9 @@ function RootNavigator({
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Protected guard={route === 'auth'}>
         <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+      <Stack.Protected guard={route === 'verify-email'}>
+        <Stack.Screen name="verify-email" />
       </Stack.Protected>
       <Stack.Protected guard={onboarding}>
         <Stack.Screen name="(onboarding)" />

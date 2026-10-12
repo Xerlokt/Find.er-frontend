@@ -1,17 +1,19 @@
 export type ProfileStatus = 'pending' | 'error' | 'missing' | 'ready';
-export type RouteTarget = 'auth' | 'offline' | 'loading' | 'error' | 'onboarding' | 'app';
+export type RouteTarget = 'auth' | 'offline' | 'loading' | 'error' | 'verify-email' | 'onboarding' | 'app';
 
 /**
  * Decide o grupo de rotas: sem login → auth (ou offline, se havia sessão salva e o servidor não respondeu no boot);
- * logado sem perfil ou com DISC pendente → onboarding; senão → app.
+ * logado com email não verificado → verify-email; logado sem perfil ou com DISC pendente → onboarding; senão → app.
  */
 export function resolveRoute(s: {
   signedIn: boolean;
+  emailVerified?: boolean;
   offline?: boolean;
   profile: ProfileStatus;
   pendingDisc: boolean;
 }): RouteTarget {
   if (!s.signedIn) return s.offline ? 'offline' : 'auth';
+  if (s.emailVerified === false) return 'verify-email';
   if (s.profile === 'pending') return 'loading';
   if (s.profile === 'error') return 'error';
   if (s.profile === 'missing' || s.pendingDisc) return 'onboarding';

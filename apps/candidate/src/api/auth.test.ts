@@ -9,7 +9,7 @@ const secure = vi.hoisted(() => ({
 }));
 vi.mock('expo-secure-store', () => secure);
 
-import { login, logout, register, restoreSession } from './auth';
+import { changeEmail, login, logout, register, restoreSession, sendEmailCode, verifyEmail } from './auth';
 import { useSession } from '../store/session';
 import { useChatSeen } from '../store/chatSeen';
 import { registerPush } from './push';
@@ -168,5 +168,46 @@ describe('restoreSession', () => {
     fetchMock.mockResolvedValueOnce(json(503, { error: 'x' }));
     expect(await restoreSession()).toBe('offline');
     expect(useSession.getState().refreshToken).toBe('r-salvo');
+  });
+});
+
+describe('verificação de email', () => {
+  it('sendEmailCode faz POST /auth/email/send autenticado', async () => {
+    useSession.setState({ accessToken: 'at' });
+    fetchMock.mockResolvedValueOnce(json(204));
+    await sendEmailCode();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('/auth/email/send');
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer at');
+  });
+
+  it('verifyEmail envia o código e adota os tokens novos com emailVerified', async () => {
+    useSession.setState({ accessToken: 'at' });
+    const verified = { accessToken: jwt({ id: 'u1', role: 'CANDIDATE', emailVerified: true }), refreshToken: 'r2' };
+    fetchMock.mockResolvedValueOnce(json(200, verified));
+    await verifyEmail('123456');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('/auth/email/verify');
+    expect(JSON.parse(init.body)).toEqual({ code: '123456' });
+    expect(useSession.getState()).toMatchObject({ emailVerified: true, refreshToken: 'r2' });
+  });
+
+  it('código inválido propaga o erro e mantém a sessão', async () => {
+    useSession.setState({ accessToken: 'at' });
+    fetchMock.mockResolvedValueOnce(json(400, { error: 'Código inválido', code: 'INVALID_CODE' }));
+    await expect(verifyEmail('000000')).rejects.toMatchObject({ code: 'INVALID_CODE' });
+    expect(useSession.getState().accessToken).toBe('at');
+  });
+
+  it('changeEmail envia o email novo e adota os tokens com o email atualizado', async () => {
+    useSession.setState({ accessToken: 'at' });
+    const updated = { accessToken: jwt({ id: 'u1', role: 'CANDIDATE', email: 'certo@b.com' }), refreshToken: 'r3' };
+    fetchMock.mockResolvedValueOnce(json(200, updated));
+    await changeEmail('certo@b.com');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('/auth/email/change');
+    expect(JSON.parse(init.body)).toEqual({ email: 'certo@b.com' });
+    expect(useSession.getState()).toMatchObject({ email: 'certo@b.com', emailVerified: false, refreshToken: 'r3' });
   });
 });
