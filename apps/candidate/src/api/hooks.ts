@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getDisc, getMyProfile, saveMyProfile, submitDisc, type ProfileInput } from './candidates';
+import { getDisc, getMyMetrics, getMyProfile, saveMyProfile, submitDisc, type ProfileInput } from './candidates';
 import type { DiscDimension } from '../data/disc';
 
 export const keys = {
   profile: ['candidate', 'me'] as const,
+  metrics: ['candidate', 'metrics'] as const,
   disc: (profileId: string) => ['candidate', 'disc', profileId] as const,
 };
 
@@ -33,6 +34,12 @@ export function useSubmitDisc(profileId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (answers: DiscDimension[]) => submitDisc(profileId, answers),
-    onSuccess: ({ dominant }) => qc.setQueryData(keys.disc(profileId), dominant),
+    onSuccess: ({ dominant }) => {
+      qc.setQueryData(keys.disc(profileId), dominant);
+      qc.invalidateQueries({ queryKey: keys.metrics });
+    },
   });
 }
+
+export const useMetrics = (enabled = true) =>
+  useQuery({ queryKey: keys.metrics, queryFn: getMyMetrics, enabled });

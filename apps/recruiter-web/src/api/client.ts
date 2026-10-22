@@ -11,7 +11,8 @@ type Options = {
 
 async function rawFetch(path: string, { method = 'GET', body, auth = true }: Options, token: string | null) {
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = body instanceof FormData; // o navegador define o boundary do multipart sozinho
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (auth && token) headers.Authorization = `Bearer ${token}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -19,7 +20,7 @@ async function rawFetch(path: string, { method = 'GET', body, auth = true }: Opt
     return await fetch(`${API_URL}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       signal: controller.signal,
     });
   } catch {

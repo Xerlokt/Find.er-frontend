@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isCensored, unlockCandidate, type RankingItem } from '../api/endpoints';
@@ -5,11 +6,14 @@ import { keys, useCompany, useJob, useRanking } from '../api/hooks';
 import { ErrorBox, PageHeader } from '../components/ui';
 import { modalityName, professionName, skillName } from '../data/taxonomy';
 import { formatDistance, formatSalary, unlockCost } from '../lib/format';
+import { cardState, filterRanking, unlockRef, type RankingFilter } from '../lib/ranking';
 
-function Card({ item, jobId, cost }: { item: RankingItem; jobId: string; cost: number }) {
+function Card({ item, jobId, cost, credits }: { item: RankingItem; jobId: string; cost: number; credits: number | undefined }) {
   const qc = useQueryClient();
+  const ref = unlockRef(item);
+  const state = cardState(item, credits, cost);
   const unlock = useMutation({
-    mutationFn: () => unlockCandidate(jobId, item.candidateId!),
+    mutationFn: () => unlockCandidate(jobId, ref!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.ranking(jobId) });
       qc.invalidateQueries({ queryKey: keys.chats });
@@ -21,15 +25,17 @@ function Card({ item, jobId, cost }: { item: RankingItem; jobId: string; cost: n
   const censored = isCensored(p);
 
   return (
-    <article className="card candidate">
+    <article className={censored ? 'card candidate locked' : 'card candidate'}>
       <div className="score">
         <b>{Math.round(item.fitScore)}</b>
         <span>fit</span>
       </div>
+      {/* placeholder genérico: o backend não manda foto nem nome de quem está censurado, o blur é só visual */}
+      {censored && <div className="avatar-ph" aria-hidden="true" />}
       <div className="grow">
         <h3>
-          #{item.rank} {censored ? 'candidato anônimo' : p.name}
-          <span className={censored ? 'pill off' : 'pill on'}>{censored ? 'não curtiu' : 'curtiu a vaga'}</span>
+          #{item.rank} {censored ? <span className="blurred">Nome do candidato</span> : p.name}
+          <span className={censored ? 'pill off' : 'pill on'}>{censored ? 'bloqueado' : 'liberado'}</span>
         </h3>
         <p className="muted">{formatDistance(item.distanceKm)}</p>
         {censored ? (
@@ -49,17 +55,24 @@ function Card({ item, jobId, cost }: { item: RankingItem; jobId: string; cost: n
               ))}
               {p.discProfile && <li>perfil DISC: {p.discProfile}</li>}
             </ul>
-            {!item.candidateId ? (
-              // lacuna do backend: o ranking omite candidateId de quem não curtiu, então não dá pra chamar /unlock
-              <p className="notice">desbloqueio indisponível: a API não envia o id de candidatos que não curtiram a vaga.</p>
-            ) : (
-              <button
-                className="btn primary"
-                disabled={unlock.isPending}
-                onClick={() => window.confirm(`Desbloquear por ${cost} créditos?`) && unlock.mutate()}
-              >
-                desbloquear ({cost} créditos)
-              </button>
+            {!unlock.isSuccess && (
+              <>
+                <button
+                  className="btn primary"
+                  disabled={unlock.isPending || state === 'insufficient-credits' || !ref}
+                  onClick={() => window.confirm(`Desbloquear por ${cost} créditos?`) && unlock.mutate()}
+                >
+                  desbloquear ({cost} créditos)
+                </button>
+                <p className="muted small">
+                  {state === 'insufficient-credits' && (
+                    <>
+                      saldo insuficiente ({credits} de {cost} créditos). <Link to="/creditos">comprar créditos</Link>{' '}
+                    </>
+                  )}
+                  ou aguarde: se o candidato curtir a vaga, o perfil é liberado sem custo.
+                </p>
+              </>
             )}
           </>
         ) : (
@@ -95,6 +108,15 @@ export function RankingPage() {
   const ranking = useRanking(id);
   const company = useCompany(job.data?.companyId);
   const cost = unlockCost(company.data?.plan ?? 'FREE');
+  const [filter, setFilter] = useState<RankingFilter>('all');
+  const all = ranking.data ?? [];
+  const shown = filterRanking(all, filter);
+  const lockedCount = filterRanking(all, 'locked').length;
+  const tabs: { key: RankingFilter; label: string; count: number }[] = [
+    { key: 'all', label: 'todos', count: all.length },
+    { key: 'revealed', label: 'liberados', count: all.length - lockedCount },
+    { key: 'locked', label: 'censurados', count: lockedCount },
+  ];
 
   return (
     <>
@@ -111,9 +133,25 @@ export function RankingPage() {
       {ranking.isLoading && <p className="muted">carregando…</p>}
       <ErrorBox error={ranking.error} />
       {ranking.data?.length === 0 && (
-        <p className="muted">ninguém deu swipe nessa vaga ainda. candidatos aparecem aqui depois de curtir ou dispensar.</p>
+        <p className="muted">ainda não há candidatos compatíveis com essa vaga. volte mais tarde.</p>
       )}
-      {ranking.data?.map((it) => <Card key={it.rank} item={it} jobId={id} cost={cost} />)}
+      {all.length > 0 && (
+        <div className="chips" role="group" aria-label="filtrar candidatos">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={filter === t.key ? 'chip on' : 'chip'}
+              aria-pressed={filter === t.key}
+              onClick={() => setFilter(t.key)}
+            >
+              {t.label} ({t.count})
+            </button>
+          ))}
+        </div>
+      )}
+      {all.length > 0 && shown.length === 0 && <p className="muted">nenhum candidato nesse filtro.</p>}
+      {shown.map((it) => <Card key={it.rank} item={it} jobId={id} cost={cost} credits={company.data?.credits} />)}
     </>
   );
 }

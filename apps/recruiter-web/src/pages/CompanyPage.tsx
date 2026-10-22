@@ -1,9 +1,22 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useRecruiter, useCompany } from '../api/hooks';
 import { ErrorBox, PageHeader } from '../components/ui';
 import { formatCnpj } from '../lib/cnpj';
 import { unlockCost } from '../lib/format';
+import { PhotosTab } from './company/PhotosTab';
+import { ProfileTab } from './company/ProfileTab';
+import { StatsTab } from './company/StatsTab';
+
+type Tab = 'perfil' | 'fotos' | 'estatisticas';
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'perfil', label: 'perfil' },
+  { key: 'fotos', label: 'fotos' },
+  { key: 'estatisticas', label: 'estatísticas' },
+];
 
 export function CompanyPage() {
+  const [tab, setTab] = useState<Tab>('perfil');
   const recruiter = useRecruiter();
   const company = useCompany(recruiter.data?.companyId);
   const c = company.data;
@@ -21,6 +34,27 @@ export function CompanyPage() {
       )}
 
       {c && (
+        <div className="chips" role="tablist" aria-label="seções da empresa">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              className={tab === t.key ? 'chip on' : 'chip'}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {c && tab === 'perfil' && <ProfileTab key={c.id} company={c} />}
+      {c && tab === 'fotos' && <PhotosTab company={c} />}
+      {c && tab === 'estatisticas' && <StatsTab companyId={c.id} />}
+
+      {c && tab === 'perfil' && (
         <section className="card">
           <h2>{c.tradeName ?? c.name}</h2>
           <dl className="facts">
@@ -58,6 +92,11 @@ export function CompanyPage() {
               <span>créditos por desbloqueio</span>
             </div>
           </div>
+          <p>
+            <Link className="btn primary" to="/creditos">
+              comprar créditos
+            </Link>
+          </p>
         </section>
       )}
     </>

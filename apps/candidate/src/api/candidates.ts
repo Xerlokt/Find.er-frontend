@@ -55,3 +55,15 @@ export async function getDisc(profileId: string): Promise<DiscDimension | null> 
 
 export const submitDisc = (profileId: string, answers: DiscDimension[]) =>
   api<{ dominant: DiscDimension }>(`/candidates/${profileId}/disc`, { method: 'POST', body: { answers } });
+
+export type CandidateMetrics = {
+  swipes: { total: number; likes: number; dislikes: number; likeRate: number | null };
+  chats: { total: number; viaMatch: number; viaCredit: number };
+  /** empresas distintas que gastaram créditos para falar com você */
+  companiesUnlockedYou: number;
+  /** 7 dias, do mais antigo ao mais novo (UTC), com zeros */
+  last7Days: { date: string; likes: number; dislikes: number }[];
+  discDominant: DiscDimension | null;
+};
+
+export const getMyMetrics = () => api<CandidateMetrics>('/candidates/me/metrics');

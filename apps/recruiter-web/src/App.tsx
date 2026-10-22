@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { Splash } from './components/ui';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import { CompanyPage } from './pages/CompanyPage';
+import { CreditsPage } from './pages/CreditsPage';
 import { JobsPage } from './pages/JobsPage';
 import { JobFormPage } from './pages/JobFormPage';
 import { RankingPage } from './pages/RankingPage';
@@ -78,6 +79,7 @@ export function App() {
         <Route path="/vagas/:id/editar" element={<JobFormPage />} />
         <Route path="/vagas/:id/ranking" element={<RankingPage />} />
         <Route path="/empresa" element={<CompanyPage />} />
+        <Route path="/creditos" element={<CreditsPage />} />
         <Route path="/conversas" element={<ChatsPage />} />
         <Route path="/conversas/:chatId" element={<ChatsPage />} />
       </Route>

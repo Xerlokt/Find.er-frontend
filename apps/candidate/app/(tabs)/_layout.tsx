@@ -33,7 +33,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="metrics"
         options={{
-          title: 'Metrics',
+          title: 'Métricas',
           tabBarActiveTintColor: colors.accent,
           tabBarIcon: ({ color }) => <Bolt color={String(color)} size={24} />,
         }}

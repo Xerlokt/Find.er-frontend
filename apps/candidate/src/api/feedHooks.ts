@@ -60,6 +60,8 @@ export function useSwipe() {
     onSuccess: (res) => {
       // LIKE abre um chat: a lista de conversas precisa refletir
       if (res.chatId) qc.invalidateQueries({ queryKey: ['chats'] });
+      // cada swipe muda as métricas do candidato
+      qc.invalidateQueries({ queryKey: ['candidate', 'metrics'] });
     },
   });
 }

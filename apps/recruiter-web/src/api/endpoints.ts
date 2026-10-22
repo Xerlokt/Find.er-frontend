@@ -45,6 +45,7 @@ export type Company = {
   logoUrl: string | null;
   description: string | null;
   rating: number;
+  photos?: CompanyPhoto[];
   plan: string;
   credits: number;
 };
@@ -69,8 +70,12 @@ export type CensoredProfile = {
   discProfile?: DiscLetter;
 };
 export type RankingItem = {
-  /** só vem para quem curtiu a vaga ou já foi desbloqueado */
+  /** REVEALED: curtiu a vaga ou já foi desbloqueado. LOCKED: censurado (não curtiu, ou ainda nem viu a vaga). */
+  status: 'REVEALED' | 'LOCKED';
+  /** só vem para os REVEALED */
   candidateId?: string;
+  /** referência opaca para o /unlock, só vem para os LOCKED (o id real nunca sai do backend) */
+  unlockToken?: string;
   fitScore: number;
   distanceKm: number | null;
   rank: number;
@@ -153,10 +158,57 @@ export const createJob = (input: JobInput) => api<Job>('/jobs', { method: 'POST'
 export const updateJob = (id: string, input: Partial<JobInput>) => api<Job>(`/jobs/${id}`, { method: 'PATCH', body: input });
 export const deactivateJob = (id: string) => api<Job>(`/jobs/${id}/deactivate`, { method: 'DELETE' });
 export const getRanking = (jobId: string) => api<RankingItem[]>(`/jobs/${jobId}/ranking`);
-export const unlockCandidate = (jobId: string, candidateId: string) =>
-  api<UnlockResult>(`/jobs/${jobId}/candidates/${candidateId}/unlock`, { method: 'POST' });
+/** `candidateRef` é o `unlockToken` do ranking (ou o candidateId, para quem já aparece revelado). */
+export const unlockCandidate = (jobId: string, candidateRef: string) =>
+  api<UnlockResult>(`/jobs/${jobId}/candidates/${encodeURIComponent(candidateRef)}/unlock`, { method: 'POST' });
 
 // ---------- chats (somente leitura: o WebSocket do backend não aceita token via query) ----------
 export const listChats = () => api<ChatSummary[]>('/chats');
 export const getMessages = (chatId: string, cursor?: string) =>
   api<MessagesPage>(`/chats/${chatId}/messages?limit=50${cursor ? `&cursor=${cursor}` : ''}`);
+
+// ---------- créditos (loja) ----------
+export type CreditPackage = { id: string; credits: number; priceCents: number };
+export type CreditTransaction = { id: string; companyId: string; amount: number; reason: string; createdAt: string };
+export type PurchaseResult = { packageId: string; credits: number; priceCents: number; balance: number };
+
+export const getCreditPackages = () => api<CreditPackage[]>('/credits/packages');
+/** Compra SIMULADA: o backend aprova na hora e credita (ainda não há gateway de pagamento). */
+export const purchaseCredits = (packageId: string) =>
+  api<PurchaseResult>('/credits/purchase', { method: 'POST', body: { packageId } });
+export const getMyTransactions = () => api<CreditTransaction[]>('/credits/transactions');
+
+// ---------- perfil, galeria e estatísticas da empresa ----------
+export type CompanyPhoto = { id: string; url: string; position: number };
+export type JobStats = {
+  jobId: string;
+  title: string;
+  isActive: boolean;
+  createdAt: string;
+  views: number;
+  likes: number;
+  dislikes: number;
+  /** likes / (likes + dislikes); null enquanto ninguém reagiu */
+  likeRate: number | null;
+};
+export type CompanyStats = {
+  totals: { jobs: number; activeJobs: number; views: number; likes: number; dislikes: number };
+  jobs: JobStats[];
+};
+
+/** Texto vazio limpa o campo no backend. */
+export const updateCompany = (id: string, input: { description?: string; tradeName?: string }) =>
+  api<Company>(`/companies/${id}`, { method: 'PATCH', body: input });
+
+const fileForm = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
+export const uploadCompanyLogo = (id: string, file: File) =>
+  api<Company>(`/companies/${id}/logo`, { method: 'POST', body: fileForm(file) });
+export const uploadCompanyPhoto = (id: string, file: File) =>
+  api<CompanyPhoto>(`/companies/${id}/photos`, { method: 'POST', body: fileForm(file) });
+export const deleteCompanyPhoto = (id: string, photoId: string) =>
+  api<void>(`/companies/${id}/photos/${photoId}`, { method: 'DELETE' });
+export const getCompanyStats = (id: string) => api<CompanyStats>(`/companies/${id}/stats`);

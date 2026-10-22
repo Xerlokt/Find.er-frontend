@@ -70,10 +70,11 @@ export function JobFormPage() {
 
   const save = useMutation({
     mutationFn: (v: JobFormOutput) => (editing ? updateJob(id!, toJobInput(v)) : createJob(toJobInput(v))),
-    onSuccess: () => {
+    onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: keys.jobs });
       if (id) qc.invalidateQueries({ queryKey: keys.job(id) });
-      navigate('/vagas');
+      // vaga nova: já mostra os melhores candidatos (censurados até o like ou o desbloqueio)
+      navigate(editing ? '/vagas' : `/vagas/${job.id}/ranking`);
     },
   });
 
